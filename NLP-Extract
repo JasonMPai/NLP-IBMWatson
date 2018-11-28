@@ -1,0 +1,96 @@
+import requests
+import json
+import pandas as pd
+import numpy as np
+import matplotlib
+import pylab
+from watson_developer_cloud import NaturalLanguageUnderstandingV1
+from watson_developer_cloud.natural_language_understanding_v1 import Features, EntitiesOptions, KeywordsOptions, EmotionOptions
+natural_language_understanding = NaturalLanguageUnderstandingV1( \
+    username='', \
+    password='', \
+    version='
+#-----------------------------------------------------------------------------------------#
+def getNews(source):
+        myurl = 'https://newsapi.org/v2/everything?sources='+source+'&apiKey=3960938b91bf45eb92e907a6b5640fc0' #Every article
+        response=requests.get(myurl)
+        data = response.json() #converts the "response" string to JSON format dictionary data to easily grep for specific data
+        news_articles = data['articles']
+        n = len(news_articles) #20 URL links will be found
+        URLs = []
+        for i in range(n):
+                URLs.append(news_articles[i]['url'])
+        return URLs
+#-----------------------------------------------------------------------------------------#
+def extractEntities(URL):
+        response = natural_language_understanding.analyze(
+          url=URL,
+          features=Features(
+            entities=EntitiesOptions(
+                sentiment=True
+        )))
+        n = len(response['entities']) #number of entities found
+        idx1 = URL.find('//www')
+        idx2 = URL.find('.com')
+        source = URL[idx1+6:idx2] # To extract source from URL
+        queue = []
+        new_queue = []
+        for i in range(n):
+                if 'text' in response['entities'][i].keys():
+                        queue.append(response['entities'][i])
+        for i in range(len(queue)):
+                new_queue.append({'entity':queue[i]['text'], 'source':source, 'url':URL, 'sentiment':queue[i]['sentiment']['score'], 'relevance':queue[i]['relevance']})
+        return new_queue
+#-----------------------------------------------------------------------------------------#
+
+URL = getNews('the-wall-street-journal')
+URL_nyt = getNews('the-new-york-times')
+URL.extend(URL_nyt) #URL contains the complete list of all urls
+
+#-------Using URL1 and URL2 as input URLs to extractEntities to create "entities"--------------#
+entities = []
+N = len(URL)
+for i in range(N):
+	entities.extend(extractEntities(URL[i]))
+
+print("Total entities are ", len(entities))
+#print("Entities \n", entities) # This is a list of dictionaries
+
+df = pd.DataFrame(entities)
+# Few checks
+# print(df.dtypes)
+# print(df.iloc[15])
+# print(df.iloc[345])
+# print(df.iloc[234])
+# print(df.iloc[561])
+
+#-----------------------------------------------------------------------------------------#
+#-------------------------------------PART 3 (1)------------------------------------------#
+table1 = pd.pivot_table(df, index=['entity'], columns=['source'], values=['relevance']) #keeping entities in rows and source in columns,gives the relevance of each entity
+
+table2 = pd.pivot_table(df, index=['entity'], columns=['source'], values=['relevance'],aggfunc=[np.sum]) # Values of cell is the sum of relevance scores for that entity. Aggregate function operates on "values-> relevance"
+
+table3 = pd.pivot_table(df, index=['entity'], columns=['source'], values=['sentiment'],aggfunc=[np.mean]) # Values of cell is the average of sentiment scores for that entity. Aggregate function operates on "values-> sentiment". By default the values are "averaged", thus, using an aggregate function may not be necessary for this case
+
+#print("table1: ", table1) 
+#print("table2: ", table2) 
+#print("table3: ", table3) 
+
+#-----------------------------------------------------------------------------------------#
+#-------------------------------------PART 3 (2)------------------------------------------#
+
+res1 = table2.dropna()
+res2 = table3.dropna()
+print(res1)
+print(res2)
+
+#-----------------------------------------------------------------------------------------#
+#-------------------------------------PART 3 (3)------------------------------------------#
+
+res1.plot(kind='bar', title='Total relevance scores for entities',color=['y','b'], position=0)
+pylab.show()
+res2.plot(kind='bar', title='Average sentiment scores for entities',color=['r','g'], position=0)
+pylab.show()
+
+#-----------------------------------------------------------------------------------------#
+
