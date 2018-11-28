@@ -1,0 +1,29 @@
+
+
+import requests
+import json
+
+def getNews(source):
+	
+	#myurl = 'https://newsapi.org/v2/top-headlines?sources='+s+'&apiKey=' #top headlines
+	myurl = 'https://newsapi.org/v2/everything?sources='+source+'&apiKey=' #Every article
+	#*****Note******* --------> &page=2,&page=3 etc can be added to the URL for more results. By default, there are 20 results on each page
+	response=requests.get(myurl)
+	data = response.json() #converts the "response" string to JSON format dictionary data to easily grep for specific data
+	
+	print("Status code is ",response.status_code)
+	print("The URL is ",myurl)
+	news_articles = data['articles']
+	n = len(news_articles)
+	URLs = []
+	print("Number of news articles found were ",n)
+	for i in range(n):
+		URLs.append(news_articles[i]['url'])
+
+	return URLs
+
+print("Specify a news source or comma separated news sources:")
+print('Example: bbc-news OR bbc-news,the-wall-street-journal etc')
+source = input("List your sources here:")	
+URLs = getNews(source)
+print("URL's found on page 1 are :", URLs)
