@@ -1,0 +1,40 @@
+
+# SAMPLE URL - http://bleacherreport.com/articles/2781438-tom-brady-tells-oprah-retirement-is-coming-sooner-rather-than-later?utm_source=cnn.com&utm_medium=referral&utm_campaign=editorial
+
+import json
+from watson_developer_cloud import NaturalLanguageUnderstandingV1
+from watson_developer_cloud.natural_language_understanding_v1 import Features, EntitiesOptions, KeywordsOptions, EmotionOptions
+natural_language_understanding = NaturalLanguageUnderstandingV1( \
+    username='', \
+    password='', \
+    version='')
+
+def extractEntities(URL):
+	response = natural_language_understanding.analyze(
+	  url=URL,
+	  features=Features(
+	    entities=EntitiesOptions(
+		sentiment=True,
+		emotion=True
+	)))
+	n = len(response['entities']) #number of entities found
+	queue = []
+	new_queue = []
+	print("Results: \n")	
+
+	idx1 = URL.find('//')
+	idx2 = URL.find('.com')
+	source = URL[idx1+2:idx2] # To extract source from URL
+
+	for i in range(n):
+		if 'text' in response['entities'][i].keys():
+			queue.append(response['entities'][i])
+	for i in range(len(queue)):
+		new_queue.append({'entity':queue[i]['text'], 'source':source, 'url':URL, 'sentiment':queue[i]['sentiment']['score'], 'relevance':queue[i]['relevance']})
+	return new_queue
+	
+URL = input("Enter your source(url) here:")
+queue = extractEntities(URL)
+print("The entities are as follows: ")
+for i in range(len(queue)):
+	print(queue[i])
